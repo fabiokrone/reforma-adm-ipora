@@ -1,0 +1,161 @@
+import { useState, useEffect } from 'react';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Servidor, Nivel, KPIData } from '../types';
+import KPICards from './KPICards';
+import Charts from './Charts';
+import ServidoresTable from './ServidoresTable';
+import NiveisTable from './NiveisTable';
+
+const Dashboard = () => {
+  const [servidores, setServidores] = useState<Servidor[]>([]);
+  const [niveis, setNiveis] = useState<Nivel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [kpiData, setKpiData] = useState<KPIData | null>(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Buscar servidores
+      const { data: servidoresData, error: servidoresError } = await supabase
+        .from('rf_servidores')
+        .select('*');
+
+      if (servidoresError) throw servidoresError;
+
+      // Buscar níveis
+      const { data: niveisData, error: niveisError } = await supabase
+        .from('rf_niveis')
+        .select('*');
+
+      if (niveisError) throw niveisError;
+
+      if (!servidoresData || !niveisData) {
+        throw new Error('Dados não encontrados');
+      }
+
+      setServidores(servidoresData);
+      setNiveis(niveisData);
+
+      // Calcular KPIs
+      const totalServidores = servidoresData.length;
+      const massaSalarial = servidoresData.reduce((sum, s) => sum + s.salario, 0);
+      const salarioMedio = massaSalarial / totalServidores;
+      const salarios = servidoresData.map((s) => s.salario);
+      const menorSalario = Math.min(...salarios);
+      const maiorSalario = Math.max(...salarios);
+      const niveisUnicos = new Set(servidoresData.map((s) => s.nivel_codigo)).size;
+
+      setKpiData({
+        totalServidores,
+        massaSalarial,
+        salarioMedio,
+        totalNiveis: niveisUnicos,
+        menorSalario,
+        maiorSalario,
+      });
+    } catch (err: any) {
+      console.error('Erro ao buscar dados:', err);
+      setError(err.message || 'Erro ao carregar os dados. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-lg text-gray-700">Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+          <div className="flex items-center gap-3 text-red-600 mb-4">
+            <AlertCircle className="w-8 h-8" />
+            <h2 className="text-xl font-bold">Erro ao Carregar Dados</h2>
+          </div>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <button
+            onClick={fetchData}
+            className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+            Dashboard Iporã do Oeste/SC
+          </h1>
+          <p className="text-lg text-gray-600">
+            Situação Atual - ANTES da Reforma Administrativa
+          </p>
+          <div className="mt-4 inline-block bg-white px-6 py-2 rounded-full shadow-md">
+            <span className="text-sm font-semibold text-blue-600">
+              Dados de {servidores.length} servidores municipais
+            </span>
+          </div>
+        </header>
+
+        {/* KPI Cards */}
+        {kpiData && <KPICards data={kpiData} />}
+
+        {/* Charts */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            Análises e Gráficos
+          </h2>
+          <Charts servidores={servidores} niveis={niveis} />
+        </div>
+
+        {/* Tabelas */}
+        <div className="space-y-8">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Dados Detalhados
+            </h2>
+            <ServidoresTable servidores={servidores} />
+          </div>
+
+          <div>
+            <NiveisTable niveis={niveis} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="mt-12 text-center text-gray-600 text-sm">
+          <p>
+            Dashboard desenvolvido para análise da situação atual do quadro de
+            servidores antes da reforma administrativa.
+          </p>
+          <p className="mt-2">
+            Prefeitura Municipal de Iporã do Oeste - SC
+          </p>
+        </footer>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
