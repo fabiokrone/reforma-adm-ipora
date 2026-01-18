@@ -7,7 +7,6 @@ import TodosOsNiveis from './TodosOsNiveis';
 
 interface CompactSalaryViewerProps {
   niveis: Nivel[];
-  servidores: Servidor[];
 }
 
 interface NivelAgrupado {
@@ -17,7 +16,7 @@ interface NivelAgrupado {
   niveis: Nivel[];
 }
 
-const CompactSalaryViewer = ({ niveis, servidores }: CompactSalaryViewerProps) => {
+const CompactSalaryViewer = ({ niveis }: CompactSalaryViewerProps) => {
   const [nivelSelecionado, setNivelSelecionado] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [modoVisualizacao, setModoVisualizacao] = useState<'individual' | 'todos'>('individual');
@@ -31,192 +30,76 @@ const CompactSalaryViewer = ({ niveis, servidores }: CompactSalaryViewerProps) =
     modoVisualizacao
   });
 
-  // Agrupar níveis por CODIGO_COMPLETO do banco
+  // Agrupar níveis por código (sem prefixo, como vem do banco)
   const niveisAgrupados = useMemo(() => {
-    // 🔍 CRIAR MAPEAMENTO DINÂMICO: codigo → codigo_com_prefixo
-    // Baseado nos dados de servidores (que TÊM os prefixos)
-    const mapeamentoPrefixos = new Map<string, string>();
-
-    servidores.forEach(servidor => {
-      // Extrair base SEM grau e referência
-      // "TEC58-I-A" → "TEC58"
-      // "TEC59AIIIA" → "TEC59A" (remover grau romano)
-      // "SEG20-IV-E" → "SEG20"
-      // "ACT-30" → "ACT-30" (código completo, não tem grau/ref)
-
-      const parts = servidor.nivel_codigo.split('-');
-      let nivelBase = '';
-
-      if (parts.length === 1) {
-        // Sem hífen: "TEC59AIIIA"
-        nivelBase = parts[0].replace(/(I{1,3}|IV|V|VI{0,3}|IX|X)([A-I])?$/, '');
-      } else if (parts.length === 2) {
-        // 2 partes: verificar se é "TEC58-IIIE" (grau) ou "ACT-30" (código)
-        const part2 = parts[1];
-        const isGrauRomano = /^(I{1,3}|IV|V|VI{0,3}|IX|X)([A-I])?$/.test(part2);
-        const isGrauNumerico = /^([1-9]|10)([A-I])?$/.test(part2);
-
-        if (isGrauRomano || isGrauNumerico) {
-          // É grau: usar só primeira parte
-          nivelBase = parts[0];
-        } else {
-          // Não é grau: é parte do código (como "ACT-30")
-          nivelBase = `${parts[0]}-${parts[1]}`;
-        }
-      } else {
-        // 3+ partes: "TEC58-III-E"
-        nivelBase = parts[0];
-      }
-
-      // Extrair código sem prefixo de letras
-      const codigoSemPrefixo = nivelBase.replace(/^[A-Z]+/, ''); // "58" ou "59A" ou "-30"
-
-      if (codigoSemPrefixo && nivelBase) {
-        mapeamentoPrefixos.set(codigoSemPrefixo, nivelBase);
-      }
-    });
-
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🗺️ MAPEAMENTO CRIADO DOS SERVIDORES:');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.table(Array.from(mapeamentoPrefixos.entries()).slice(0, 15).map(([sem, com]) => ({
-      'Código no Banco': sem,
-      'Código Real': com
-    })));
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
     const grupos: Record<string, NivelAgrupado> = {};
 
     niveis.forEach((nivel) => {
-      // codigo no banco: "58" (sem prefixo)
-      const codigoSemPrefixo = nivel.codigo;
+      // O codigo no banco rf_niveis já vem sem prefixo: "58", "20-B", "43"
+      const codigo = nivel.codigo;
 
-      // Buscar o código COM prefixo no mapeamento
-      const codigoComPrefixo = mapeamentoPrefixos.get(codigoSemPrefixo) || codigoSemPrefixo;
-
-      if (!grupos[codigoComPrefixo]) {
-        grupos[codigoComPrefixo] = {
-          codigo: nivel.codigo,           // "58" (original)
-          codigo_completo: codigoComPrefixo, // "TEC58" (com prefixo!)
+      if (!grupos[codigo]) {
+        grupos[codigo] = {
+          codigo: nivel.codigo,
+          codigo_completo: nivel.codigo, // No banco não tem prefixo!
           categoria: 'Outros',
           niveis: [],
         };
       }
-      grupos[codigoComPrefixo].niveis.push(nivel);
+      grupos[codigo].niveis.push(nivel);
     });
 
     // Processar cada grupo
     Object.values(grupos).forEach((grupo) => {
-      // Categoria baseada no codigo_completo
-      const cc = grupo.codigo_completo.toUpperCase();
-
-      if (cc.startsWith('SEG')) grupo.categoria = 'Segurança';
-      else if (cc.startsWith('SOP')) grupo.categoria = 'Serviços Operacionais';
-      else if (cc.startsWith('SAU')) grupo.categoria = 'Saúde';
-      else if (cc.startsWith('TEC')) grupo.categoria = 'Técnico';
-      else if (cc.startsWith('TEP')) grupo.categoria = 'Técnico Especializado';
-      else if (cc.startsWith('ADM')) grupo.categoria = 'Administrativo';
-      else if (cc.startsWith('SUP')) grupo.categoria = 'Superior';
-      else if (cc.startsWith('ACT')) grupo.categoria = 'Atividades';
-      else if (cc === 'CC' || cc === 'CCCC') grupo.categoria = 'Cargo em Comissão';
-      else grupo.categoria = 'Outros';
-
       // Ordenar células dentro do grupo
       grupo.niveis.sort((a, b) => {
         const grauOrder: Record<string, number> = {
-          'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
-          'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10
+          'I': 1, 'II': 2, 'III': 3, 'IV': 4
         };
 
         const grauA = grauOrder[a.grau] || parseInt(a.grau) || 999;
         const grauB = grauOrder[b.grau] || parseInt(b.grau) || 999;
 
         if (grauA !== grauB) return grauA - grauB;
-
         return a.referencia.localeCompare(b.referencia);
       });
     });
 
-    // Ordenar grupos
-    const resultado = Object.values(grupos).sort((a, b) => {
-      if (a.categoria !== b.categoria) {
-        return a.categoria.localeCompare(b.categoria);
-      }
-
+    // Ordenar grupos por código numérico
+    return Object.values(grupos).sort((a, b) => {
       const numA = parseInt(a.codigo.replace(/\D/g, '')) || 0;
       const numB = parseInt(b.codigo.replace(/\D/g, '')) || 0;
       return numA - numB;
     });
-
-    return resultado;
-  }, [niveis, servidores]);
-
-  // 🔍 LOG TEMPORÁRIO - VER O QUE FOI GERADO
-  useEffect(() => {
-    console.log('📋 OPÇÕES GERADAS PELO AGRUPAMENTO:');
-    console.table(niveisAgrupados.slice(0, 10).map(n => ({
-      codigo: n.codigo,
-      codigo_completo: n.codigo_completo,
-      categoria: n.categoria,
-      qtd: n.niveis.length,
-      primeiro_nivel_completo: n.niveis[0]?.codigo_completo || 'N/A'
-    })));
-  }, [niveisAgrupados]);
+  }, [niveis]);
 
   // Auto-seleção quando servidor é clicado
   useEffect(() => {
     if (highlightState.nivelDestacado) {
-      console.log('🔍 COMPACTSALARYVIEWER recebeu:', {
-        nivelDestacado: highlightState.nivelDestacado,
-        nivelAtual: nivelSelecionado,
-        total_opcoes: niveisAgrupados.length
-      });
+      console.log('🔍 CompactSalaryViewer - Nível recebido:', highlightState.nivelDestacado);
 
-      // Verificar match exato
+      // Match direto por código (sem prefixo)
       const matchExato = niveisAgrupados.find(
-        n => n.codigo_completo === highlightState.nivelDestacado
+        n => n.codigo === highlightState.nivelDestacado
       );
 
       if (matchExato) {
-        console.log('✅ Match exato encontrado:', matchExato.codigo_completo);
-        setNivelSelecionado(highlightState.nivelDestacado);
+        console.log('✅ Match encontrado:', matchExato.codigo);
+        setNivelSelecionado(matchExato.codigo);
 
-        // Scroll automático
+        // Scroll automático após 100ms
         setTimeout(() => {
-          const elemento = document.getElementById('compact-salary-viewer');
-          if (elemento) {
-            elemento.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
+          document.getElementById('compact-salary-viewer')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
         }, 100);
       } else {
-        // Tentar match por código (sem prefixo)
-        const matchPorCodigo = niveisAgrupados.find(
-          n => n.codigo === highlightState.nivelDestacado
-        );
-
-        if (matchPorCodigo) {
-          console.log('✅ Match por código:', matchPorCodigo.codigo_completo);
-          setNivelSelecionado(matchPorCodigo.codigo_completo);
-        } else {
-          console.error('❌ NÍVEL NÃO ENCONTRADO!');
-          console.table({
-            'Procurando': highlightState.nivelDestacado,
-            'Opções (5 primeiras)': niveisAgrupados.slice(0, 5).map(n => n.codigo_completo).join(', '),
-            'Total de opções': niveisAgrupados.length
-          });
-
-          // Mostrar níveis que começam com as mesmas letras
-          const similares = niveisAgrupados.filter(n =>
-            n.codigo_completo.startsWith(highlightState.nivelDestacado.substring(0, 3))
-          );
-
-          if (similares.length > 0) {
-            console.warn('⚠️ Níveis similares encontrados:', similares.map(n => n.codigo_completo));
-          }
-        }
+        console.error('❌ Nível não encontrado:', highlightState.nivelDestacado);
+        console.log('Opções disponíveis:', niveisAgrupados.map(n => n.codigo).slice(0, 10));
       }
     }
-  }, [highlightState.nivelDestacado, highlightState.servidorSelecionado, niveisAgrupados]);
+  }, [highlightState.nivelDestacado, niveisAgrupados]);
 
   // Log para monitorar mudanças no nivelSelecionado
   useEffect(() => {

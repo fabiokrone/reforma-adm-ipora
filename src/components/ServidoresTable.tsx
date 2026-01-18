@@ -116,57 +116,19 @@ const ServidoresTable = ({ servidores, filtroCargoExterno = '' }: ServidoresTabl
   const handleServidorClick = (servidor: Servidor) => {
     console.log('👆 Servidor clicado:', servidor.nome, '|', servidor.nivel_codigo);
 
-    let nivelBase = '';
-    let grau = '';
-    let referencia = '';
+    // Usar nivel_codigo_limpo que já está no formato correto: "58-III-A"
+    const parts = servidor.nivel_codigo_limpo.split('-');
 
-    // Extrair partes separadas por hífen
-    const parts = servidor.nivel_codigo.split('-');
-
-    // Caso 1: Apenas 1 parte (sem hífen) - código completo
-    if (parts.length === 1) {
-      nivelBase = parts[0];
-    }
-    // Caso 2: 2 partes
-    else if (parts.length === 2) {
-      const part1 = parts[0]; // "TEC58" ou "ACT"
-      const part2 = parts[1]; // "IIIE" ou "30" ou "III"
-
-      // Verificar se part2 é um grau válido (romano ou numérico pequeno)
-      const isGrauRomano = /^(I{1,3}|IV|V|VI{0,3}|IX|X)([A-I])?$/.test(part2);
-      const isGrauNumerico = /^([1-9]|10)([A-I])?$/.test(part2); // 1-10 com opcional ref
-
-      if (isGrauRomano) {
-        // "TEC58-IIIE" → grau com referência opcional
-        const match = part2.match(/^(I{1,3}|IV|V|VI{0,3}|IX|X)([A-I])?$/);
-        if (match) {
-          nivelBase = part1;
-          grau = match[1];
-          referencia = match[2] || '';
-        }
-      } else if (isGrauNumerico) {
-        // "CC-1A" ou "CC-10" → grau numérico com referência opcional
-        const match = part2.match(/^(\d+)([A-I])?$/);
-        if (match) {
-          nivelBase = part1;
-          grau = match[1];
-          referencia = match[2] || '';
-        }
-      } else {
-        // "ACT-30" → parte do código, não é grau!
-        nivelBase = `${part1}-${part2}`; // Código completo
-        grau = '';
-        referencia = '';
-      }
-    }
-    // Caso 3: 3 ou mais partes: "TEC58-III-E"
-    else if (parts.length >= 3) {
-      nivelBase = parts[0];
-      grau = parts[1];
-      referencia = parts[2];
+    if (parts.length !== 3) {
+      console.error('❌ Formato inválido de nivel_codigo_limpo:', servidor.nivel_codigo_limpo);
+      return;
     }
 
-    console.log('📤 Dados extraídos:', { nivelBase, grau, referencia });
+    const nivelBase = parts[0];      // "58"
+    const grau = parts[1];           // "III"
+    const referencia = parts[2];     // "A"
+
+    console.log('📤 Passando para highlight:', { nivelBase, grau, referencia });
 
     setHighlight(
       nivelBase,

@@ -42,13 +42,14 @@ export const getCategoria = (codigoCompleto: string): string => {
 };
 
 /**
- * Agrupa níveis por CODIGO (não codigo_completo)
+ * Agrupa níveis por codigo (que já vem sem prefixo do banco)
  */
 export const agruparNiveis = (niveis: Nivel[]): NivelAgrupado[] => {
   const grupos = new Map<string, Nivel[]>();
 
   niveis.forEach((nivel) => {
-    const key = nivel.codigo; // ← MUDANÇA AQUI: usar 'codigo' ao invés de 'codigo_completo'
+    // Agrupar por codigo (que já vem sem prefixo do banco)
+    const key = nivel.codigo;
     if (!grupos.has(key)) {
       grupos.set(key, []);
     }
@@ -58,24 +59,10 @@ export const agruparNiveis = (niveis: Nivel[]): NivelAgrupado[] => {
   const resultado: NivelAgrupado[] = [];
 
   grupos.forEach((niveisGrupo, codigo) => {
-    // Pegar o primeiro registro para extrair categoria
-    const primeiroNivel = niveisGrupo[0];
-    
-    // Determinar codigo_completo:
-    // Se tem prefixo (SEG, TEC, etc), usar. Senão, usar apenas o código
-    let codigoCompleto = codigo;
-    if (primeiroNivel.codigo_completo && primeiroNivel.codigo_completo !== codigo) {
-      // Extrair prefixo do primeiro registro
-      const match = primeiroNivel.codigo_completo.match(/^([A-Z]+)/);
-      if (match) {
-        codigoCompleto = match[1] + codigo;
-      }
-    }
-
     resultado.push({
       codigo: codigo,
-      codigo_completo: codigoCompleto, // Ex: "SEG16" ou só "16"
-      categoria: getCategoria(codigoCompleto),
+      codigo_completo: codigo, // No banco rf_niveis não tem prefixo
+      categoria: 'Outros',
       niveis: niveisGrupo.sort((a, b) => {
         // Ordenar por grau e depois por referência
         const grauOrder = { 'I': 1, 'II': 2, 'III': 3, 'IV': 4 };
@@ -88,12 +75,8 @@ export const agruparNiveis = (niveis: Nivel[]): NivelAgrupado[] => {
     });
   });
 
-  // Ordenar por categoria e depois por código
+  // Ordenar por código numérico
   return resultado.sort((a, b) => {
-    if (a.categoria !== b.categoria) {
-      return a.categoria.localeCompare(b.categoria);
-    }
-    // Ordenação numérica do código
     const numA = parseInt(a.codigo.replace(/\D/g, '')) || 0;
     const numB = parseInt(b.codigo.replace(/\D/g, '')) || 0;
     return numA - numB;

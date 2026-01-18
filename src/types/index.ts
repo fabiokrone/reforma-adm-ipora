@@ -4,7 +4,9 @@ export interface Servidor {
   id: number;
   nome: string;
   cargo: string;
+  regime: string;
   nivel_codigo: string;
+  nivel_codigo_limpo: string;
   salario: number;
   nivel_id: number;
 }

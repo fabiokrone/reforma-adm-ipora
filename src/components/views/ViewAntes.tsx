@@ -32,6 +32,7 @@ const ViewAntes = ({ servidores, niveis, kpiData }: ViewAntesProps) => {
       <div>
         <TabelaCargosNiveis
           servidores={servidores}
+          niveis={niveis}
           onCargoClick={setFiltroCargoAtivo}
         />
       </div>
@@ -52,7 +53,7 @@ const ViewAntes = ({ servidores, niveis, kpiData }: ViewAntesProps) => {
 
       {/* Visualizador Compacto de Níveis Salariais */}
       <div>
-        <CompactSalaryViewer niveis={niveis} servidores={servidores} />
+        <CompactSalaryViewer niveis={niveis} />
       </div>
     </div>
   );

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Users, DollarSign } from 'lucide-react';
-import { Servidor } from '../../types';
+import { Servidor, Nivel } from '../../types';
 import { formatCurrency } from '../../lib/formatters';
 
 interface TabelaCargosNiveisProps {
   servidores: Servidor[];
+  niveis: Nivel[];
   onCargoClick?: (cargo: string) => void;
 }
 
@@ -21,7 +22,7 @@ interface CargoInfo {
   salario_medio: number;
 }
 
-const TabelaCargosNiveis = ({ servidores, onCargoClick }: TabelaCargosNiveisProps) => {
+const TabelaCargosNiveis = ({ servidores, niveis, onCargoClick }: TabelaCargosNiveisProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('cargo');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -91,7 +92,27 @@ const TabelaCargosNiveis = ({ servidores, onCargoClick }: TabelaCargosNiveisProp
         }
       });
 
-      // Calcular estatísticas salariais
+      // Encontrar TODOS os níveis correspondentes na tabela rf_niveis
+      const niveisDoGrupo = niveis.filter(n =>
+        // Pegar código base sem grau/ref: "TEC59" → "59"
+        n.codigo === nivelMaisComum.replace(/^[A-Z]+/, '')
+      );
+
+      let salario_min: number;
+      let salario_max: number;
+
+      if (niveisDoGrupo.length > 0) {
+        // Usar faixa completa da tabela rf_niveis
+        const salariosTabela = niveisDoGrupo.map(n => n.salario);
+        salario_min = Math.min(...salariosTabela);
+        salario_max = Math.max(...salariosTabela);
+      } else {
+        // Fallback: usar salários dos servidores
+        const salariosServidores = data.servidores.map(s => s.salario);
+        salario_min = Math.min(...salariosServidores);
+        salario_max = Math.max(...salariosServidores);
+      }
+
       const salarios = data.servidores.map(s => s.salario);
 
       resultado.push({
@@ -99,14 +120,14 @@ const TabelaCargosNiveis = ({ servidores, onCargoClick }: TabelaCargosNiveisProp
         nivel_inicial: nivelMaisComum,
         grau_ref_mais_comum: grauRefMaisComum,
         quantidade: data.servidores.length,
-        salario_min: Math.min(...salarios),
-        salario_max: Math.max(...salarios),
+        salario_min,
+        salario_max,
         salario_medio: salarios.reduce((a, b) => a + b, 0) / salarios.length,
       });
     });
 
     return resultado;
-  }, [servidores]);
+  }, [servidores, niveis]);
 
   // Filtrar e ordenar
   const dadosFiltrados = useMemo(() => {
