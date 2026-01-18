@@ -38,9 +38,38 @@ const CompactSalaryViewer = ({ niveis, servidores }: CompactSalaryViewerProps) =
     const mapeamentoPrefixos = new Map<string, string>();
 
     servidores.forEach(servidor => {
-      // Extrair: "TEC58-I-A" → codigo_base="TEC58", codigo_sem_prefixo="58"
-      const nivelBase = servidor.nivel_codigo.split('-')[0]; // "TEC58"
-      const codigoSemPrefixo = nivelBase.replace(/^[A-Z]+/, ''); // "58"
+      // Extrair base SEM grau e referência
+      // "TEC58-I-A" → "TEC58"
+      // "TEC59AIIIA" → "TEC59A" (remover grau romano)
+      // "SEG20-IV-E" → "SEG20"
+      // "ACT-30" → "ACT-30" (código completo, não tem grau/ref)
+
+      const parts = servidor.nivel_codigo.split('-');
+      let nivelBase = '';
+
+      if (parts.length === 1) {
+        // Sem hífen: "TEC59AIIIA"
+        nivelBase = parts[0].replace(/(I{1,3}|IV|V|VI{0,3}|IX|X)([A-I])?$/, '');
+      } else if (parts.length === 2) {
+        // 2 partes: verificar se é "TEC58-IIIE" (grau) ou "ACT-30" (código)
+        const part2 = parts[1];
+        const isGrauRomano = /^(I{1,3}|IV|V|VI{0,3}|IX|X)([A-I])?$/.test(part2);
+        const isGrauNumerico = /^([1-9]|10)([A-I])?$/.test(part2);
+
+        if (isGrauRomano || isGrauNumerico) {
+          // É grau: usar só primeira parte
+          nivelBase = parts[0];
+        } else {
+          // Não é grau: é parte do código (como "ACT-30")
+          nivelBase = `${parts[0]}-${parts[1]}`;
+        }
+      } else {
+        // 3+ partes: "TEC58-III-E"
+        nivelBase = parts[0];
+      }
+
+      // Extrair código sem prefixo de letras
+      const codigoSemPrefixo = nivelBase.replace(/^[A-Z]+/, ''); // "58" ou "59A" ou "-30"
 
       if (codigoSemPrefixo && nivelBase) {
         mapeamentoPrefixos.set(codigoSemPrefixo, nivelBase);

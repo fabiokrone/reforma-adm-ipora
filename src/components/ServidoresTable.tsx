@@ -120,39 +120,50 @@ const ServidoresTable = ({ servidores, filtroCargoExterno = '' }: ServidoresTabl
     let grau = '';
     let referencia = '';
 
-    // Extrair base (tudo antes do primeiro hífen)
+    // Extrair partes separadas por hífen
     const parts = servidor.nivel_codigo.split('-');
-    nivelBase = parts[0]; // "TEC58" ou "SEG20"
 
-    if (parts.length >= 2) {
-      const grauRef = parts[1]; // Pode ser "III", "IIIE", "I", etc.
+    // Caso 1: Apenas 1 parte (sem hífen) - código completo
+    if (parts.length === 1) {
+      nivelBase = parts[0];
+    }
+    // Caso 2: 2 partes
+    else if (parts.length === 2) {
+      const part1 = parts[0]; // "TEC58" ou "ACT"
+      const part2 = parts[1]; // "IIIE" ou "30" ou "III"
 
-      // Se temos exatamente 2 partes, pode ser "TEC58-IIIE" (grau+ref juntos)
-      if (parts.length === 2) {
-        // Tentar separar grau romano de letra
-        const match = grauRef.match(/^(I{1,3}|IV|V|VI{0,3}|IX|X)([A-I])?$/);
+      // Verificar se part2 é um grau válido (romano ou numérico pequeno)
+      const isGrauRomano = /^(I{1,3}|IV|V|VI{0,3}|IX|X)([A-I])?$/.test(part2);
+      const isGrauNumerico = /^([1-9]|10)([A-I])?$/.test(part2); // 1-10 com opcional ref
 
+      if (isGrauRomano) {
+        // "TEC58-IIIE" → grau com referência opcional
+        const match = part2.match(/^(I{1,3}|IV|V|VI{0,3}|IX|X)([A-I])?$/);
         if (match) {
-          grau = match[1]; // "III"
-          referencia = match[2] || ''; // "E" (se existir)
-        } else {
-          // Não é formato romano, pode ser numérico
-          const numMatch = grauRef.match(/^(\d+)([A-I])?$/);
-          if (numMatch) {
-            grau = numMatch[1];
-            referencia = numMatch[2] || '';
-          } else {
-            // Formato não reconhecido, usar como grau
-            grau = grauRef;
-          }
+          nivelBase = part1;
+          grau = match[1];
+          referencia = match[2] || '';
         }
+      } else if (isGrauNumerico) {
+        // "CC-1A" ou "CC-10" → grau numérico com referência opcional
+        const match = part2.match(/^(\d+)([A-I])?$/);
+        if (match) {
+          nivelBase = part1;
+          grau = match[1];
+          referencia = match[2] || '';
+        }
+      } else {
+        // "ACT-30" → parte do código, não é grau!
+        nivelBase = `${part1}-${part2}`; // Código completo
+        grau = '';
+        referencia = '';
       }
-
-      // Se temos 3 ou mais partes: "TEC58-III-E"
-      if (parts.length >= 3) {
-        grau = parts[1];
-        referencia = parts[2];
-      }
+    }
+    // Caso 3: 3 ou mais partes: "TEC58-III-E"
+    else if (parts.length >= 3) {
+      nivelBase = parts[0];
+      grau = parts[1];
+      referencia = parts[2];
     }
 
     console.log('📤 Dados extraídos:', { nivelBase, grau, referencia });
