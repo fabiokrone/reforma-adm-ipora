@@ -35,6 +35,37 @@ Este projeto apresenta uma análise completa e visual dos 213 servidores municip
   - Código de cores por faixa salarial
   - Visualização completa da estrutura de cargos
 
+## 🎯 Funcionalidades Especiais
+
+### Sistema de Navegação ANTES/DEPOIS
+Interface com abas navegáveis que permitem alternar entre:
+- **ANTES**: Visualização completa da situação atual (213 servidores, KPIs, gráficos, tabelas)
+- **DEPOIS**: Placeholder preparado para dados da nova estrutura pós-reforma
+
+### Sistema Interativo de Destaque de Posição
+**Como funciona:**
+1. Clique em qualquer servidor na tabela de servidores
+2. O sistema automaticamente:
+   - Faz scroll até a tabela salarial correspondente
+   - Destaca o grid do nível do servidor com borda colorida e animação
+   - Marca a célula exata (GRAU × REFERÊNCIA) onde o servidor está posicionado
+   - Exibe badge com informações do servidor selecionado
+
+**Recursos visuais:**
+- Célula destacada com gradiente verde/azul e ícone ⭐
+- Animação de pulse suave na célula selecionada
+- Breadcrumb mostrando: Servidor → Nível-Grau-Referência
+- Botão "Limpar Destaque" para resetar a visualização
+- Linha do servidor selecionado destacada em verde
+
+### Grid Completo de Tabelas Salariais
+Visualização organizada de TODAS as tabelas salariais:
+- Agrupamento por categoria (Segurança, Saúde, Técnico, etc.)
+- Sistema de accordion expansível/colapsável por categoria
+- Cada nível exibido em formato pivot profissional
+- Cores diferentes por faixa salarial para facilitar leitura
+- Ícones temáticos por categoria (🛡️ Segurança, ⚕️ Saúde, etc.)
+
 ## 🚀 Tecnologias Utilizadas
 
 - **React 18** - Biblioteca para construção da interface
@@ -44,6 +75,7 @@ Este projeto apresenta uma análise completa e visual dos 213 servidores municip
 - **Recharts** - Biblioteca de gráficos responsivos
 - **Supabase** - Backend as a Service para banco de dados
 - **Lucide React** - Biblioteca de ícones modernos
+- **React Context API** - Gerenciamento de estado global para sistema de destaque
 
 ## 📁 Estrutura do Projeto
 
@@ -51,19 +83,31 @@ Este projeto apresenta uma análise completa e visual dos 213 servidores municip
 pagina-web/
 ├── src/
 │   ├── components/
-│   │   ├── Dashboard.tsx       # Componente principal
-│   │   ├── KPICards.tsx        # Cards de métricas
-│   │   ├── Charts.tsx          # Todos os 6 gráficos
-│   │   ├── ServidoresTable.tsx # Tabela de servidores
-│   │   └── NiveisTable.tsx     # Tabela pivot de níveis
+│   │   ├── Dashboard.tsx        # Componente principal
+│   │   ├── KPICards.tsx         # Cards de métricas
+│   │   ├── Charts.tsx           # Todos os 6 gráficos
+│   │   ├── ServidoresTable.tsx  # Tabela de servidores (com click)
+│   │   ├── NiveisTable.tsx      # Tabela pivot simples
+│   │   ├── tabs/
+│   │   │   └── TabsNavigation.tsx  # Navegação ANTES/DEPOIS
+│   │   ├── views/
+│   │   │   ├── ViewAntes.tsx    # View da situação atual
+│   │   │   └── ViewDepois.tsx   # View placeholder futuro
+│   │   └── niveis/
+│   │       ├── NiveisGrid.tsx   # Container de grids de níveis
+│   │       ├── NivelCard.tsx    # Card de nível individual
+│   │       └── NivelTable.tsx   # Tabela pivot com destaque
+│   ├── contexts/
+│   │   └── HighlightContext.tsx # Context API para destaque
 │   ├── lib/
-│   │   ├── supabase.ts         # Configuração do Supabase
-│   │   └── formatters.ts       # Funções de formatação
+│   │   ├── supabase.ts          # Configuração do Supabase
+│   │   ├── formatters.ts        # Funções de formatação
+│   │   └── nivelParser.ts       # Parser de nivel_codigo
 │   ├── types/
-│   │   └── index.ts            # Tipos TypeScript
-│   ├── App.tsx                 # Componente raiz
-│   ├── main.tsx                # Ponto de entrada
-│   └── index.css               # Estilos globais + Tailwind
+│   │   └── index.ts             # Tipos TypeScript
+│   ├── App.tsx                  # Componente raiz
+│   ├── main.tsx                 # Ponto de entrada
+│   └── index.css                # Estilos globais + Tailwind
 ├── index.html
 ├── package.json
 ├── tsconfig.json

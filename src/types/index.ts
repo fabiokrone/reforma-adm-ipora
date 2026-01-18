@@ -50,3 +50,42 @@ export interface ServidorTopSalario {
   cargo: string;
   salario: number;
 }
+
+// Tipos para o sistema de grid de níveis
+export interface NivelParsed {
+  codigo: string;
+  codigo_completo: string;
+  grau: string;
+  referencia: string;
+}
+
+export interface NivelAgrupado {
+  codigo: string;
+  codigo_completo: string;
+  categoria: string;
+  niveis: Nivel[];
+}
+
+export type TabView = 'antes' | 'depois';
+
+// Tipos para comparação ANTES × DEPOIS (preparação futura)
+export interface ComparacaoNivel {
+  codigo_completo: string;
+  status: 'mantido' | 'extinto' | 'novo';
+  antes?: Nivel;
+  depois?: Nivel;
+}
+
+export interface MudancaServidor {
+  servidor: Servidor;
+  nivel_antes: string;
+  nivel_depois: string;
+  grau_antes: string;
+  grau_depois: string;
+  ref_antes: string;
+  ref_depois: string;
+  salario_antes: number;
+  salario_depois: number;
+  variacao: number;
+  variacao_percentual: number;
+}

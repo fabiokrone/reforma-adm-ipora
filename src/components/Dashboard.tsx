@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Servidor, Nivel, KPIData } from '../types';
-import KPICards from './KPICards';
-import Charts from './Charts';
-import ServidoresTable from './ServidoresTable';
-import NiveisTable from './NiveisTable';
+import { Servidor, Nivel, KPIData, TabView } from '../types';
+import { HighlightProvider } from '../contexts/HighlightContext';
+import TabsNavigation from './tabs/TabsNavigation';
+import ViewAntes from './views/ViewAntes';
+import ViewDepois from './views/ViewDepois';
 
 const Dashboard = () => {
   const [servidores, setServidores] = useState<Servidor[]>([]);
@@ -13,29 +13,58 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
+  const [activeTab, setActiveTab] = useState<TabView>('antes');
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  /**
+   * Busca TODOS os registros de uma tabela com paginação
+   */
+  const fetchAllRecords = async (tableName: string) => {
+    const BATCH_SIZE = 1000;
+    let allData: any[] = [];
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .range(offset, offset + BATCH_SIZE - 1);
+
+      if (error) {
+        console.error(`Erro ao buscar ${tableName}:`, error);
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        offset += BATCH_SIZE;
+
+        // Se retornou menos que BATCH_SIZE, acabou
+        if (data.length < BATCH_SIZE) {
+          hasMore = false;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+
+    return allData;
+  };
 
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Buscar servidores
-      const { data: servidoresData, error: servidoresError } = await supabase
-        .from('rf_servidores')
-        .select('*');
+      // Buscar TODOS os servidores com paginação
+      const servidoresData = await fetchAllRecords('rf_servidores');
 
-      if (servidoresError) throw servidoresError;
-
-      // Buscar níveis
-      const { data: niveisData, error: niveisError } = await supabase
-        .from('rf_niveis')
-        .select('*');
-
-      if (niveisError) throw niveisError;
+      // Buscar TODOS os níveis com paginação
+      const niveisData = await fetchAllRecords('rf_niveis');
 
       if (!servidoresData || !niveisData) {
         throw new Error('Dados não encontrados');
@@ -101,60 +130,45 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <header className="mb-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            Dashboard Iporã do Oeste/SC
-          </h1>
-          <p className="text-lg text-gray-600">
-            Situação Atual - ANTES da Reforma Administrativa
-          </p>
-          <div className="mt-4 inline-block bg-white px-6 py-2 rounded-full shadow-md">
-            <span className="text-sm font-semibold text-blue-600">
-              Dados de {servidores.length} servidores municipais
-            </span>
-          </div>
-        </header>
+    <HighlightProvider>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <header className="mb-8 text-center">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+              Dashboard Iporã do Oeste/SC
+            </h1>
+            <p className="text-lg text-gray-600">
+              Plano de Cargos e Salários - Reforma Administrativa
+            </p>
+            <div className="mt-4 inline-block bg-white px-6 py-2 rounded-full shadow-md">
+              <span className="text-sm font-semibold text-blue-600">
+                Dados de {servidores.length} servidores municipais
+              </span>
+            </div>
+          </header>
 
-        {/* KPI Cards */}
-        {kpiData && <KPICards data={kpiData} />}
+          {/* Tabs Navigation */}
+          <TabsNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {/* Charts */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Análises e Gráficos
-          </h2>
-          <Charts servidores={servidores} niveis={niveis} />
+          {/* Content Views */}
+          {activeTab === 'antes' && kpiData && (
+            <ViewAntes servidores={servidores} niveis={niveis} kpiData={kpiData} />
+          )}
+
+          {activeTab === 'depois' && <ViewDepois />}
+
+          {/* Footer */}
+          <footer className="mt-12 text-center text-gray-600 text-sm">
+            <p>
+              Dashboard desenvolvido para análise do plano de cargos e salários
+              da reforma administrativa.
+            </p>
+            <p className="mt-2">Prefeitura Municipal de Iporã do Oeste - SC</p>
+          </footer>
         </div>
-
-        {/* Tabelas */}
-        <div className="space-y-8">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Dados Detalhados
-            </h2>
-            <ServidoresTable servidores={servidores} />
-          </div>
-
-          <div>
-            <NiveisTable niveis={niveis} />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="mt-12 text-center text-gray-600 text-sm">
-          <p>
-            Dashboard desenvolvido para análise da situação atual do quadro de
-            servidores antes da reforma administrativa.
-          </p>
-          <p className="mt-2">
-            Prefeitura Municipal de Iporã do Oeste - SC
-          </p>
-        </footer>
       </div>
-    </div>
+    </HighlightProvider>
   );
 };
 

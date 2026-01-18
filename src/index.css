@@ -34,3 +34,66 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* Animações personalizadas */
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.8), 0 0 30px rgba(34, 197, 94, 0.5);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Transições suaves para hover */
+button, a, .clickable {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Estilo para células destacadas */
+.cell-highlighted {
+  position: relative;
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Estilo para cards destacados */
+.card-highlighted {
+  animation: slide-in 0.3s ease-out;
+}

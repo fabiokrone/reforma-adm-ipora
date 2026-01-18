@@ -24,6 +24,12 @@ const COLORS = [
   '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'
 ];
 
+// Função para truncar textos longos
+const truncateText = (text: string, maxLength: number = 20): string => {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+};
+
 const Charts = ({ servidores, niveis }: ChartsProps) => {
   // 1. Distribuição de Servidores por Nível
   const distribuicaoPorNivel = servidores.reduce((acc, servidor) => {
@@ -45,7 +51,11 @@ const Charts = ({ servidores, niveis }: ChartsProps) => {
   }, {} as Record<string, number>);
 
   const dataDistribuicaoCargo = Object.entries(distribuicaoPorCargo)
-    .map(([cargo, quantidade]) => ({ cargo, quantidade }))
+    .map(([cargo, quantidade]) => ({
+      cargo: truncateText(cargo, 20),
+      cargoCompleto: cargo,
+      quantidade
+    }))
     .sort((a, b) => b.quantidade - a.quantidade)
     .slice(0, 10);
 
@@ -98,17 +108,24 @@ const Charts = ({ servidores, niveis }: ChartsProps) => {
   }, {} as Record<string, number>);
 
   const dataMassaCargo = Object.entries(massaPorCargo)
-    .map(([cargo, massa]) => ({ cargo, massa }))
+    .map(([cargo, massa]) => ({
+      cargo: truncateText(cargo, 25),
+      cargoCompleto: cargo,
+      massa
+    }))
     .sort((a, b) => b.massa - a.massa)
     .slice(0, 10);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      // Mostrar cargoCompleto se disponível (no tooltip aparece completo)
+      const displayLabel = payload[0]?.payload?.cargoCompleto || label;
+
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
-          <p className="font-semibold text-gray-900">{label}</p>
+        <div className="bg-white p-3 border border-gray-200 rounded shadow-lg max-w-xs">
+          <p className="font-semibold text-gray-900 text-sm break-words">{displayLabel}</p>
           {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color }}>
+            <p key={index} style={{ color: entry.color }} className="text-sm">
               {entry.name}: {entry.name.includes('Salário') || entry.name.includes('Massa')
                 ? formatCurrency(entry.value)
                 : entry.value}
@@ -154,13 +171,13 @@ const Charts = ({ servidores, niveis }: ChartsProps) => {
                 cx="50%"
                 cy="50%"
                 outerRadius={100}
-                label={(entry) => `${entry.cargo}: ${entry.quantidade}`}
               >
                 {dataDistribuicaoCargo.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
+              <Legend />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -235,8 +252,9 @@ const Charts = ({ servidores, niveis }: ChartsProps) => {
                 dataKey="cargo"
                 angle={-45}
                 textAnchor="end"
-                height={120}
+                height={100}
                 interval={0}
+                tick={{ fontSize: 10 }}
               />
               <YAxis tickFormatter={(value) => formatCurrency(value)} />
               <Tooltip content={<CustomTooltip />} />
