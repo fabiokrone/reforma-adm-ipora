@@ -3,7 +3,6 @@ import { Search, ArrowUpDown, ArrowUp, ArrowDown, MousePointer2, ChevronDown, Ch
 import { Servidor } from '../types';
 import { formatCurrency } from '../lib/formatters';
 import { useHighlight } from '../contexts/HighlightContext';
-import { parseNivelCodigo } from '../lib/nivelParser';
 
 interface ServidoresTableProps {
   servidores: Servidor[];
