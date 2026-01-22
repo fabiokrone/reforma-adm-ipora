@@ -22,14 +22,6 @@ const CompactSalaryViewer = ({ niveis }: CompactSalaryViewerProps) => {
   const [modoVisualizacao, setModoVisualizacao] = useState<'individual' | 'todos'>('individual');
   const { highlightState } = useHighlight();
 
-  // Log para ver renderizações
-  console.log('🔄 CompactSalaryViewer renderizou', {
-    nivelSelecionado,
-    highlightState_nivelDestacado: highlightState.nivelDestacado,
-    highlightState_servidor: highlightState.servidorSelecionado,
-    modoVisualizacao
-  });
-
   // Agrupar níveis por código (sem prefixo, como vem do banco)
   const niveisAgrupados = useMemo(() => {
     const grupos: Record<string, NivelAgrupado> = {};
@@ -76,15 +68,12 @@ const CompactSalaryViewer = ({ niveis }: CompactSalaryViewerProps) => {
   // Auto-seleção quando servidor é clicado
   useEffect(() => {
     if (highlightState.nivelDestacado) {
-      console.log('🔍 CompactSalaryViewer - Nível recebido:', highlightState.nivelDestacado);
-
       // Match direto por código (sem prefixo)
       const matchExato = niveisAgrupados.find(
         n => n.codigo === highlightState.nivelDestacado
       );
 
       if (matchExato) {
-        console.log('✅ Match encontrado:', matchExato.codigo);
         setNivelSelecionado(matchExato.codigo);
 
         // Scroll automático após 100ms
@@ -94,17 +83,9 @@ const CompactSalaryViewer = ({ niveis }: CompactSalaryViewerProps) => {
             block: 'center'
           });
         }, 100);
-      } else {
-        console.error('❌ Nível não encontrado:', highlightState.nivelDestacado);
-        console.log('Opções disponíveis:', niveisAgrupados.map(n => n.codigo).slice(0, 10));
       }
     }
   }, [highlightState.nivelDestacado, niveisAgrupados]);
-
-  // Log para monitorar mudanças no nivelSelecionado
-  useEffect(() => {
-    console.log('📊 nivelSelecionado MUDOU para:', nivelSelecionado);
-  }, [nivelSelecionado]);
 
   // Filtrar níveis para busca
   const niveisFiltrados = useMemo(() => {
@@ -120,13 +101,6 @@ const CompactSalaryViewer = ({ niveis }: CompactSalaryViewerProps) => {
   }, [niveisAgrupados, searchTerm]);
 
   const nivelAtual = niveisAgrupados.find((n) => n.codigo_completo === nivelSelecionado);
-
-  // Log para verificar o nivelAtual
-  console.log('🎯 nivelAtual calculado:', {
-    nivelSelecionado,
-    nivelAtual: nivelAtual?.codigo_completo,
-    existe: !!nivelAtual
-  });
 
   return (
     <div id="compact-salary-viewer" className="space-y-6">
